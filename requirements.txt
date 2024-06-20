@@ -1,0 +1,8 @@
+gunicorn
+netcdf4
+xarray
+regionmask
+dash
+geopandas
+numpy
+plotly
