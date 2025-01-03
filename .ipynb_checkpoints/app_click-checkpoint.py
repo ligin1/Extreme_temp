@@ -28,9 +28,9 @@ unique_states = india_gdf_f.drop_duplicates(subset=['NAME_1'])
 india_geojson_f = json.loads(india_gdf_f.to_json())
 
 # Load datasets
-ds_tmean_ref = xr.open_dataset('precomputed_mean.nc')
-ds_tmean = xr.open_dataset('CPC_tmean_2024.nc')
-per_90 = xr.open_dataset('precomputed_percentiles.nc')
+ds_tmean_ref = xr.open_dataset('precomputed_mean_tmax.nc')
+ds_tmean = xr.open_dataset('CPC_tmax_2024.nc')
+per_90 = xr.open_dataset('precomputed_percentiles_tmax.nc')
 
 # Calculate the number of days exceeding the 99th percentile for each state
 def calculate_extreme_days(state):
@@ -39,7 +39,7 @@ def calculate_extreme_days(state):
     tmean_mask = ds_tmean.where(mask).mean(['lat', 'lon'])
     tmean_clim_mask = ds_tmean_ref.sel(state=state)
     tmean_mask = tmean_mask.sel(time=slice('2024-01-01', '2024-12-31')).squeeze()
-    percentile_90 = per_90.sel(state=state).__xarray_dataarray_variable__
+    percentile_90 = per_90.sel(state=state).tmax
 
     start_date = np.datetime64('2024-01-01')
     day_of_year_start = (start_date - np.datetime64('2024-01-01')).astype('timedelta64[D]').astype(int)
@@ -49,13 +49,13 @@ def calculate_extreme_days(state):
     new_time_index = pd.date_range(start='2024-01-01', periods=length_of_p90, freq='D')
     p90_clim_ind_s = xr.DataArray(p90_shifted_values, coords={'time': new_time_index}, dims=['time'])
 
-    tmean_shifted_values = np.roll(tmean_mask.__xarray_dataarray_variable__.values, -day_of_year_start)
+    tmean_shifted_values = np.roll(tmean_mask.tmax.values, -day_of_year_start)
     tmean_ind_s = xr.DataArray(tmean_shifted_values.squeeze(), coords={'time': new_time_index}, dims=['time'])
 
-    tmean_clim_shifted_values = np.roll(tmean_clim_mask.__xarray_dataarray_variable__.values, -day_of_year_start)
+    tmean_clim_shifted_values = np.roll(tmean_clim_mask.tmax.values, -day_of_year_start)
     tmean_clim_ind_s = xr.DataArray(tmean_clim_shifted_values, coords={'time': new_time_index}, dims=['time'])
 
-    tmean_anomaly = tmean_mask.__xarray_dataarray_variable__.groupby('time.dayofyear') - tmean_clim_ind_s.groupby('time.dayofyear').mean('time')
+    tmean_anomaly = tmean_mask.tmax.groupby('time.dayofyear') - tmean_clim_ind_s.groupby('time.dayofyear').mean('time')
 
     days_exceeding_99th = np.sum((tmean_anomaly.values + tmean_clim_ind_s.values) > p90_clim_ind_s.values)
     
@@ -144,7 +144,7 @@ def update_graph(clickData):
     tmean_mask = ds_tmean.where(mask).mean(['lat', 'lon'])
     tmean_clim_mask = ds_tmean_ref.sel(state=state)
     tmean_mask = tmean_mask.sel(time=slice('2024-01-01', '2024-12-31')).squeeze()
-    percentile_90 = per_90.sel(state=state).__xarray_dataarray_variable__
+    percentile_90 = per_90.sel(state=state).tmax
 
     start_date = np.datetime64('2024-01-01')
     day_of_year_start = (start_date - np.datetime64('2024-01-01')).astype('timedelta64[D]').astype(int)
@@ -154,13 +154,13 @@ def update_graph(clickData):
     new_time_index = pd.date_range(start='2024-01-01', periods=length_of_p90, freq='D')
     p90_clim_ind_s = xr.DataArray(p90_shifted_values, coords={'time': new_time_index}, dims=['time'])
 
-    tmean_shifted_values = np.roll(tmean_mask.__xarray_dataarray_variable__.values, -day_of_year_start)
+    tmean_shifted_values = np.roll(tmean_mask.tmax.values, -day_of_year_start)
     tmean_ind_s = xr.DataArray(tmean_shifted_values.squeeze(), coords={'time': new_time_index}, dims=['time'])
 
-    tmean_clim_shifted_values = np.roll(tmean_clim_mask.__xarray_dataarray_variable__.values, -day_of_year_start)
+    tmean_clim_shifted_values = np.roll(tmean_clim_mask.tmax.values, -day_of_year_start)
     tmean_clim_ind_s = xr.DataArray(tmean_clim_shifted_values, coords={'time': new_time_index}, dims=['time'])
 
-    tmean_anomaly = tmean_mask.__xarray_dataarray_variable__.groupby('time.dayofyear') - tmean_clim_ind_s.groupby('time.dayofyear').mean('time')
+    tmean_anomaly = tmean_mask.tmax.groupby('time.dayofyear') - tmean_clim_ind_s.groupby('time.dayofyear').mean('time')
 
     days_exceeding_99th = np.sum((tmean_anomaly.values + tmean_clim_ind_s.values) > p90_clim_ind_s.values)
 
