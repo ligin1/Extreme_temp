@@ -41,10 +41,23 @@ def calculate_extreme_days(state):
     tmean_mask = tmean_mask.sel(time=slice('2024-01-01', '2024-12-31')).squeeze()
     percentile_90 = per_90.sel(state=state).tmax
 
+    start_date = np.datetime64('2024-01-01')
+    day_of_year_start = (start_date - np.datetime64('2024-01-01')).astype('timedelta64[D]').astype(int)
 
-    tmean_anomaly = tmean_mask.tmax - tmean_clim_mask.tmax
+    p90_shifted_values = np.roll(percentile_90.values, -day_of_year_start)
+    length_of_p90 = len(percentile_90.dayofyear)
+    new_time_index = pd.date_range(start='2024-01-01', periods=length_of_p90, freq='D')
+    p90_clim_ind_s = xr.DataArray(p90_shifted_values, coords={'time': new_time_index}, dims=['time'])
 
-    days_exceeding_99th = np.sum((tmean_anomaly.values + tmean_clim_mask.tmax.values) > percentile_90.values)
+    tmean_shifted_values = np.roll(tmean_mask.tmax.values, -day_of_year_start)
+    tmean_ind_s = xr.DataArray(tmean_shifted_values.squeeze(), coords={'time': new_time_index}, dims=['time'])
+
+    tmean_clim_shifted_values = np.roll(tmean_clim_mask.tmax.values, -day_of_year_start)
+    tmean_clim_ind_s = xr.DataArray(tmean_clim_shifted_values, coords={'time': new_time_index}, dims=['time'])
+
+    tmean_anomaly = tmean_mask.tmax.groupby('time.dayofyear') - tmean_clim_ind_s.groupby('time.dayofyear').mean('time')
+
+    days_exceeding_99th = np.sum((tmean_anomaly.values + tmean_clim_ind_s.values) > p90_clim_ind_s.values)
     
     return days_exceeding_99th
 
